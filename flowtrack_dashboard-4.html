@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowTrack — Cashflow Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0D1B2A;
+    --slate:   #1B2B3B;
+    --card:    #162231;
+    --border:  #243447;
+    --emerald: #00C896;
+    --emerald2:#00A87C;
+    --gold:    #F5A623;
+    --red:     #FF5F6D;
+    --white:   #E8EDF2;
+    --muted:   #8A9BB0;
+    --dim:     #4A5C70;
+  }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, var(--slate) 0%, #0f2235 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--emerald); }
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .month-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--white);
+    cursor: pointer;
+  }
+  .month-picker select {
+    background: transparent;
+    border: none;
+    color: var(--white);
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+  }
+  .month-picker select option { background: var(--slate); }
+  .save-btn {
+    background: var(--emerald);
+    color: var(--navy);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .save-btn:hover { background: var(--emerald2); }
+
+  /* CASHFLOW RIVER */
+  .river-section {
+    background: linear-gradient(180deg, var(--slate) 0%, var(--navy) 100%);
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .river-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .river-stats {
+    display: flex;
+    gap: 40px;
+    align-items: flex-end;
+    margin-bottom: 18px;
+  }
+  .river-stat { display: flex; flex-direction: column; gap: 4px; }
+  .river-stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .river-stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .river-stat-value.income { color: var(--emerald); }
+  .river-stat-value.expense { color: var(--red); }
+  .river-stat-value.net { color: var(--white); }
+  .river-stat-sub { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  .river-canvas-wrap {
+    width: 100%;
+    height: 70px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+  #riverCanvas { width: 100%; height: 100%; display: block; }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 200px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* SECTION HEADERS */
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .add-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--emerald);
+    font-size: 13px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .add-btn:hover { background: var(--emerald); color: var(--navy); border-color: var(--emerald); }
+
+  /* INCOME SECTION */
+  .income-block { border-bottom: 1px solid var(--border); }
+  .income-list { padding: 8px 0; }
+  .income-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 24px;
+    transition: background 0.1s;
+  }
+  .income-item:hover { background: rgba(0,200,150,0.04); }
+  .income-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--emerald); flex-shrink: 0; }
+  .income-dot.secondary { background: var(--gold); }
+  .income-dot.tertiary { background: #6C8EEF; }
+  .income-name { font-size: 13px; color: var(--white); flex: 1; }
+  .income-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--emerald);
+  }
+  .income-del {
+    background: none;
+    border: none;
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .income-item:hover .income-del { opacity: 1; }
+
+  .add-income-form {
+    display: none;
+    padding: 10px 24px;
+    gap: 8px;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+    background: rgba(0,200,150,0.03);
+  }
+  .add-income-form.open { display: flex; }
+  .form-row { display: flex; gap: 8px; }
+  .form-input {
+    background: var(--navy);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--emerald); }
+  .form-input.amount { width: 110px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+  .form-confirm {
+    background: var(--emerald);
+    border: none;
+    border-radius: 6px;
+    color: var(--navy);
+    font-weight: 600;
+    font-size: 12px;
+    padding: 7px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* ALLOCATION SECTION */
+  .allocation-block { border-bottom: 1px solid var(--border); flex: 1; }
+  .alloc-list { padding: 8px 0; }
+  .alloc-item {
+    padding: 8px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .alloc-item:hover { background: rgba(255,255,255,0.02); }
+  .alloc-top { display: flex; align-items: center; gap: 10px; }
+  .alloc-color { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .alloc-name { font-size: 13px; flex: 1; }
+  .alloc-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .alloc-amt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .alloc-bar-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-left: 20px;
+  }
+  .alloc-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .alloc-del {
+    background: none; border: none;
+    color: var(--dim); cursor: pointer;
+    font-size: 13px; padding: 2px 4px;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .alloc-item:hover .alloc-del { opacity: 1; }
+
+  .add-alloc-form {
+    display: none;
+    padding: 10px 24px;
+    gap: 8px;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .add-alloc-form.open { display: flex; }
+
+  /* RIGHT PANEL */
+  .right-panel { display: flex; flex-direction: column; }
+
+  /* PROJECTION */
+  .projection-section {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 28px;
+  }
+  .proj-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .proj-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .proj-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .proj-card.income-card::before { background: var(--emerald); }
+  .proj-card.saving-card::before { background: var(--gold); }
+  .proj-card.accum-card::before { background: #6C8EEF; }
+  .proj-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .proj-month {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .proj-month.income-card { color: var(--emerald); }
+  .proj-month.saving-card { color: var(--gold); }
+  .proj-month.accum-card { color: #6C8EEF; }
+  .proj-annual {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .proj-trend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    margin-top: 6px;
+  }
+  .trend-up { color: var(--emerald); }
+  .trend-dn { color: var(--red); }
+
+  .proj-chart-wrap {
+    margin-top: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .proj-chart-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  #projCanvas { width: 100%; height: 140px; display: block; }
+
+  /* EXPENSE TRACKER */
+  .expense-section { padding: 0; flex: 1; }
+  .expense-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .expense-filters {
+    display: flex;
+    gap: 6px;
+  }
+  .filter-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-pill.active {
+    background: var(--emerald);
+    border-color: var(--emerald);
+    color: var(--navy);
+    font-weight: 600;
+  }
+
+  .expense-table { width: 100%; }
+  .expense-table-head {
+    display: grid;
+    grid-template-columns: 100px 1fr 110px 100px 80px 36px;
+    padding: 8px 28px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .expense-list { max-height: 320px; overflow-y: auto; }
+  .expense-list::-webkit-scrollbar { width: 4px; }
+  .expense-list::-webkit-scrollbar-track { background: transparent; }
+  .expense-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .expense-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 110px 100px 80px 36px;
+    padding: 10px 28px;
+    border-bottom: 1px solid rgba(36,52,71,0.5);
+    align-items: center;
+    transition: background 0.1s;
+    cursor: default;
+  }
+  .expense-row:hover { background: rgba(255,255,255,0.02); }
+  .exp-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .exp-desc { font-size: 13px; color: var(--white); }
+  .exp-cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .cat-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .exp-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--red);
+  }
+  .exp-status {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-align: center;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-paid { background: rgba(0,200,150,0.12); color: var(--emerald); }
+  .status-pending { background: rgba(245,166,35,0.12); color: var(--gold); }
+  .status-recurring { background: rgba(108,142,239,0.12); color: #6C8EEF; }
+
+  .exp-del {
+    background: none; border: none;
+    color: var(--dim); cursor: pointer;
+    font-size: 14px; opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .expense-row:hover .exp-del { opacity: 1; }
+
+  .add-expense-form {
+    display: none;
+    padding: 12px 28px;
+    gap: 8px;
+    border-top: 1px solid var(--border);
+    background: rgba(255,95,109,0.03);
+    flex-wrap: wrap;
+  }
+  .add-expense-form.open { display: flex; }
+  .add-expense-form .form-input.date-in { width: 110px; flex-shrink: 0; }
+  .add-expense-form .form-input.cat-in { width: 120px; flex-shrink: 0; }
+  .add-expense-form .form-input.amt-in { width: 100px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+  .add-expense-form .form-input.stat-in { width: 100px; flex-shrink: 0; }
+  .add-expense-form .form-input.desc-in { flex: 1; min-width: 140px; }
+
+  /* SUMMARY BAR */
+  .summary-bar {
+    background: var(--slate);
+    border-top: 1px solid var(--border);
+    padding: 12px 28px;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+  }
+  .sum-item { display: flex; flex-direction: column; gap: 2px; }
+  .sum-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .sum-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .sum-val.g { color: var(--emerald); }
+  .sum-val.r { color: var(--red); }
+  .sum-val.w { color: var(--white); }
+
+  select.form-input { cursor: pointer; }
+  select.form-input option { background: var(--slate); }
+  .empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--dim);
+    font-size: 13px;
+  }
+
+  /* LOGIN SCREEN */
+  .login-wrapper {
+    position: fixed;
+    inset: 0;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .login-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .login-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .login-logo span { color: var(--emerald); }
+  .login-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .login-input {
+    background: var(--navy);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    padding: 12px 16px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .login-input:focus { border-color: var(--emerald); }
+  .login-btn {
+    background: var(--emerald);
+    color: var(--navy);
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 8px;
+  }
+  .login-btn:hover { background: var(--emerald2); }
+  .auth-error {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    height: 14px;
+  }
+  .auth-toggle {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .auth-toggle span {
+    color: var(--emerald);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .auth-toggle span:hover { text-decoration: underline; }
+  .welcome-text {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 12px;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading-view" class="login-wrapper" style="z-index: 10000; background: var(--navy);">
+  <div class="login-card" style="box-shadow: none; border: none; background: transparent;">
+    <div class="login-logo" style="animation: pulse 1.5s infinite;">Flow<span>Track</span></div>
+    <div class="login-sub" style="margin-top: 10px;">Verifying session...</div>
+  </div>
+</div>
+<style>
+  @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+</style>
+
+<!-- AUTHENTICATION SCREEN -->
+<div id="auth-view" class="login-wrapper" style="display: none;">
+  <div class="login-card">
+    <div class="login-logo">Flow<span>Track</span></div>
+    <div class="login-sub" id="auth-subtitle">Create your account profile</div>
+
+    <!-- SIGNUP FORM -->
+    <form id="signupForm" class="login-form" onsubmit="handleSignup(event)">
+      <input type="text" id="regName" class="login-input" placeholder="Full Name" required />
+      <input type="email" id="regEmail" class="login-input" placeholder="Email Address" required />
+      <input type="password" id="regPwd" class="login-input" placeholder="Password" required />
+      <input type="password" id="regPwdConfirm" class="login-input" placeholder="Confirm Password" required />
+      <button type="submit" class="login-btn">Create Profile</button>
+      <div class="auth-toggle">Already have an account? <span onclick="toggleAuth('login')">Log in</span></div>
+    </form>
+
+    <!-- LOGIN FORM -->
+    <form id="loginForm" class="login-form" style="display: none;" onsubmit="handleLogin(event)">
+      <input type="email" id="loginEmail" class="login-input" placeholder="Email Address" required />
+      <input type="password" id="loginPassword" class="login-input" placeholder="Password" required />
+      <button type="submit" class="login-btn">Enter Dashboard</button>
+      <div class="auth-toggle">Need an account? <span onclick="toggleAuth('signup')">Sign up</span></div>
+    </form>
+    
+    <div id="authError" class="auth-error">Error message</div>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="dashboard-view" style="display: none;">
+
+<header>
+  <div class="logo">Flow<span>Track</span> <span class="welcome-text">| Welcome, <span id="welcomeName">User</span></span></div>
+  <div class="header-meta">
+    <div class="month-picker">
+      <span>📅</span>
+      <select id="monthSelect">
+        <option value="0">January</option><option value="1">February</option>
+        <option value="2">March</option><option value="3">April</option>
+        <option value="4">May</option><option value="5">June</option>
+        <option value="6">July</option><option value="7">August</option>
+        <option value="8">September</option><option value="9">October</option>
+        <option value="10">November</option><option value="11">December</option>
+      </select>
+      <select id="yearSelect">
+        <option>2024</option><option>2025</option><option selected>2026</option><option>2027</option>
+      </select>
+    </div>
+    <button class="add-btn" onclick="handleLogout()" style="margin-right:10px;">Logout</button>
+    <button class="save-btn" onclick="saveData()">Save ✓</button>
+  </div>
+</header>
+
+<!-- CASHFLOW RIVER -->
+<section class="river-section">
+  <div class="river-label">Cashflow Overview</div>
+  <div class="river-stats">
+    <div class="river-stat">
+      <span class="river-stat-label">Total Income</span>
+      <span class="river-stat-value income" id="riverIncome">$0</span>
+      <span class="river-stat-sub" id="riverIncomeSub">per month</span>
+    </div>
+    <div class="river-stat">
+      <span class="river-stat-label">Total Expenses</span>
+      <span class="river-stat-value expense" id="riverExpense">$0</span>
+      <span class="river-stat-sub" id="riverExpenseSub">this month</span>
+    </div>
+    <div class="river-stat">
+      <span class="river-stat-label">Net Flow</span>
+      <span class="river-stat-value net" id="riverNet">$0</span>
+      <span class="river-stat-sub" id="riverNetSub">remaining</span>
+    </div>
+    <div class="river-stat">
+      <span class="river-stat-label">Savings Rate</span>
+      <span class="river-stat-value" id="riverSavRate" style="color:#6C8EEF">0%</span>
+      <span class="river-stat-sub" id="riverSavSub">of income</span>
+    </div>
+  </div>
+  <div class="river-canvas-wrap">
+    <canvas id="riverCanvas"></canvas>
+  </div>
+</section>
+
+<div class="main-grid">
+  <!-- LEFT PANEL -->
+  <aside class="left-panel">
+
+    <!-- INCOME -->
+    <div class="income-block">
+      <div class="section-head">
+        <span class="section-title">Income Sources</span>
+        <button class="add-btn" onclick="toggleForm('incomeForm')">+ Add</button>
+      </div>
+      <div class="income-list" id="incomeList"></div>
+      <div class="add-income-form" id="incomeForm">
+        <div class="form-row">
+          <input class="form-input" id="incName" placeholder="Income source name" />
+        </div>
+        <div class="form-row">
+          <input class="form-input amount" id="incAmount" placeholder="Amount" type="number" />
+          <select class="form-input" id="incFreq">
+            <option value="monthly">Monthly</option>
+            <option value="biweekly">Bi-weekly</option>
+            <option value="weekly">Weekly</option>
+            <option value="annual">Annual</option>
+          </select>
+          <button class="form-confirm" onclick="addIncome()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALLOCATION -->
+    <div class="allocation-block">
+      <div class="section-head">
+        <span class="section-title">Money Allocation</span>
+        <button class="add-btn" onclick="toggleForm('allocForm')">+ Add</button>
+      </div>
+      <div class="alloc-list" id="allocList"></div>
+      <div class="add-alloc-form" id="allocForm">
+        <div class="form-row">
+          <input class="form-input" id="alcName" placeholder="Category name" />
+          <input type="color" id="alcColor" value="#00C896" style="width:38px;height:34px;border:1px solid var(--border);border-radius:6px;background:var(--navy);cursor:pointer;padding:2px;flex-shrink:0;" />
+        </div>
+        <div class="form-row">
+          <input class="form-input amount" id="alcAmt" placeholder="Amount" type="number" min="0" oninput="updateAllocPct()" />
+          <span style="color:var(--muted);font-size:13px;align-self:center" id="alcPctPreview">% of income</span>
+          <button class="form-confirm" onclick="addAlloc()">Add</button>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <!-- PROJECTIONS -->
+    <section class="projection-section">
+      <div class="section-head" style="padding:0 0 0 0;">
+        <span class="section-title">Projections</span>
+        <span style="font-size:11px;color:var(--muted);">12-month outlook</span>
+      </div>
+      <div class="proj-grid">
+        <div class="proj-card income-card">
+          <div class="proj-label">Monthly Income</div>
+          <div class="proj-month income-card" id="projIncome">$0</div>
+          <div class="proj-annual" id="projIncomeAnn">$0 / year</div>
+          <div class="proj-trend"><span class="trend-up" id="projIncomeTrend">↑</span><span id="projIncomeTrendTxt" style="font-size:11px;color:var(--muted)">Based on sources</span></div>
+        </div>
+        <div class="proj-card saving-card">
+          <div class="proj-label">Monthly Savings</div>
+          <div class="proj-month saving-card" id="projSav">$0</div>
+          <div class="proj-annual" id="projSavAnn">$0 / year</div>
+          <div class="proj-trend"><span class="trend-up">↑</span><span style="font-size:11px;color:var(--muted)" id="projSavPct">0% of income</span></div>
+        </div>
+        <div class="proj-card accum-card">
+          <div class="proj-label">1-Year Accumulation</div>
+          <div class="proj-month accum-card" id="projAccum">$0</div>
+          <div class="proj-annual" id="projAccumSub">Savings + investments</div>
+          <div class="proj-trend"><span style="color:#6C8EEF">◆</span><span style="font-size:11px;color:var(--muted)" id="projAccumNote">12-month outlook</span></div>
+        </div>
+      </div>
+      <div class="proj-chart-wrap">
+        <div class="proj-chart-label">12-Month Cashflow Projection</div>
+        <canvas id="projCanvas"></canvas>
+      </div>
+    </section>
+
+    <!-- EXPENSE TRACKER -->
+    <section class="expense-section">
+      <div class="expense-head">
+        <span class="section-title">Expense Tracker</span>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div class="expense-filters">
+            <span class="filter-pill active" onclick="filterExpenses('all',this)">All</span>
+            <span class="filter-pill" onclick="filterExpenses('paid',this)">Paid</span>
+            <span class="filter-pill" onclick="filterExpenses('pending',this)">Pending</span>
+            <span class="filter-pill" onclick="filterExpenses('recurring',this)">Recurring</span>
+          </div>
+          <button class="add-btn" onclick="toggleForm('expForm')">+ Add</button>
+        </div>
+      </div>
+      <div class="expense-table-head">
+        <span>Date</span><span>Description</span><span>Category</span>
+        <span>Amount</span><span>Status</span><span></span>
+      </div>
+      <div class="expense-list" id="expenseList"></div>
+      <div class="add-expense-form" id="expForm">
+        <input class="form-input date-in" id="expDate" type="date" />
+        <input class="form-input desc-in" id="expDesc" placeholder="Description" />
+        <select class="form-input cat-in" id="expCat">
+          <option value="Housing">Housing</option>
+          <option value="Food">Food</option>
+          <option value="Transport">Transport</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Health">Health</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Savings">Savings</option>
+          <option value="Investment">Investment</option>
+          <option value="Other">Other</option>
+        </select>
+        <input class="form-input amt-in" id="expAmt" type="number" placeholder="Amount" />
+        <select class="form-input stat-in" id="expStat">
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+          <option value="recurring">Recurring</option>
+        </select>
+        <button class="form-confirm" onclick="addExpense()">Add</button>
+      </div>
+    </section>
+
+    <!-- SUMMARY BAR -->
+    <div class="summary-bar">
+      <div class="sum-item">
+        <span class="sum-label">Total Income</span>
+        <span class="sum-val g" id="sumIncome">$0.00</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">Total Spent</span>
+        <span class="sum-val r" id="sumSpent">$0.00</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">Remaining</span>
+        <span class="sum-val w" id="sumRemaining">$0.00</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">Allocated</span>
+        <span class="sum-val" style="color:#6C8EEF" id="sumAllocated">$0.00</span>
+      </div>
+      <div class="sum-item" style="margin-left:auto">
+        <span class="sum-label">Unallocated</span>
+        <span class="sum-val" style="color:var(--gold)" id="sumUnalloc">$0.00</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div> <!-- Close dashboard-view wrapper -->
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// 🚀 PASTE YOUR REAL FIREBASE CONFIG HERE TO MAKE GITHUB PAGES WORK
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY", // <--- PUT YOUR REAL KEY BACK HERE!
+  authDomain: "cashflowtracker-5b8f4.firebaseapp.com",
+  projectId: "cashflowtracker-5b8f4",
+  storageBucket: "cashflowtracker-5b8f4.firebasestorage.app",
+  messagingSenderId: "803375491476",
+  appId: "1:803375491476:web:45097b7d7a096f380a4781",
+  measurementId: "G-5YSY18MLGB"
+};
+
+// If the API key is still the placeholder, we fallback to LocalStorage
+let isMock = firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "";
+
+let app, auth, db, analytics;
+try {
+  if (!isMock) {
+    app = initializeApp(firebaseConfig);
+    analytics = getAnalytics(app);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  }
+} catch (err) {
+  console.error("Firebase initialization failed. Falling back to local mode.", err);
+  isMock = true; // Force fallback mode if Firebase crashes
+}
+
+const appId = 'flowtrack-production'; 
+let userId = isMock ? 'local-user' : null;
+let userProfile = null;
+
+// Expose functions to window for inline HTML handlers
+window.toggleAuth = toggleAuth;
+window.handleSignup = handleSignup;
+window.handleLogin = handleLogin;
+window.handleLogout = handleLogout;
+window.toggleForm = toggleForm;
+window.addIncome = addIncome;
+window.deleteIncome = deleteIncome;
+window.addAlloc = addAlloc;
+window.deleteAlloc = deleteAlloc;
+window.updateAllocPct = updateAllocPct;
+window.addExpense = addExpense;
+window.deleteExpense = deleteExpense;
+window.filterExpenses = filterExpenses;
+window.saveData = saveData;
+
+// ─── AUTHENTICATION ──────────────────────────────────────────────────────────
+async function initFirebase() {
+  if (isMock) {
+    console.warn("Notice: Using LocalStorage fallback mode. Update 'firebaseConfig' to enable cloud sync.");
+    checkLocalProfile();
+    return;
+  }
+
+  // Safety timeout: If Firebase gets stuck, force the login screen to show
+  const fallbackTimer = setTimeout(() => {
+    document.getElementById('loading-view').style.display = 'none';
+    document.getElementById('auth-view').style.display = 'flex';
+  }, 4000);
+
+  // Listen for real authentication state changes
+  onAuthStateChanged(auth, async (user) => {
+    clearTimeout(fallbackTimer); // Clear safety timer
+    
+    if (user) {
+      userId = user.uid;
+      try {
+        await loadUserProfile();
+        await loadDashboardData();
+      } catch (err) {
+        console.error("Error loading user data:", err);
+        // Fallback so the user isn't stuck if database rules block the read
+        if (!userProfile) userProfile = { name: "User" };
+      }
+      enterDashboard();
+    } else {
+      userId = null;
+      userProfile = null;
+      document.getElementById('loading-view').style.display = 'none';
+      document.getElementById('auth-view').style.display = 'flex';
+      document.getElementById('dashboard-view').style.display = 'none';
+      toggleAuth('login');
+    }
+  });
+}
+
+function checkLocalProfile() {
+  // FIX: Ensure loading screen hides and auth view shows when in offline/mock mode
+  document.getElementById('loading-view').style.display = 'none';
+  document.getElementById('auth-view').style.display = 'flex';
+
+  const localProf = localStorage.getItem('ft_profile');
+  if (localProf) {
+    userProfile = JSON.parse(localProf);
+    toggleAuth('login');
+  } else {
+    toggleAuth('signup');
+  }
+}
+
+async function loadUserProfile() {
+  const profileRef = doc(db, 'artifacts', appId, 'users', userId, 'profile', 'data');
+  const snap = await getDoc(profileRef);
+  if (snap.exists()) {
+    userProfile = snap.data();
+  } else {
+    userProfile = { name: "User" }; // Fallback
+  }
+}
+
+function toggleAuth(mode) {
+  document.getElementById('authError').style.opacity = '0';
+  if (mode === 'login') {
+    document.getElementById('signupForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'flex';
+    document.getElementById('auth-subtitle').textContent = 'Secure Dashboard Access';
+  } else {
+    document.getElementById('signupForm').style.display = 'flex';
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('auth-subtitle').textContent = 'Create your account profile';
+  }
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pwd = document.getElementById('regPwd').value;
+  const pwdConf = document.getElementById('regPwdConfirm').value;
+
+  if (pwd !== pwdConf) {
+    showAuthError("Passwords do not match!");
+    return;
+  }
+
+  if (isMock) {
+    userProfile = { name, email, password: pwd };
+    localStorage.setItem('ft_profile', JSON.stringify(userProfile));
+    await loadDashboardData();
+    enterDashboard();
+    return;
+  }
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pwd);
+    userId = userCredential.user.uid;
+    userProfile = { name, email };
+    
+    // Save profile data to database
+    const profileRef = doc(db, 'artifacts', appId, 'users', userId, 'profile', 'data');
+    await setDoc(profileRef, userProfile);
+    
+  } catch (error) {
+    console.error(error);
+    if (error.code === 'auth/email-already-in-use') {
+       showAuthError("Email already in use. Please log in.");
+    } else {
+       showAuthError("Failed to create account: " + error.message);
+    }
+  }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const pwd = document.getElementById('loginPassword').value;
+  
+  if (isMock) {
+    if (!userProfile) return showAuthError("No account found. Sign up first.");
+    if (email === userProfile.email && pwd === userProfile.password) {
+      await loadDashboardData();
+      enterDashboard();
+    } else {
+      showAuthError("Incorrect email or password.");
+    }
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, email, pwd);
+    // onAuthStateChanged will handle the dashboard entry automatically
+  } catch (error) {
+    showAuthError("Incorrect email or password.");
+  }
+}
+
+async function handleLogout() {
+  if (isMock) {
+    document.getElementById('auth-view').style.display = 'flex';
+    document.getElementById('dashboard-view').style.display = 'none';
+    return;
+  }
+  try {
+    await signOut(auth);
+  } catch(e) {
+    console.error("Logout failed", e);
+  }
+}
+
+function showAuthError(msg) {
+  const errEl = document.getElementById('authError');
+  errEl.textContent = msg;
+  errEl.style.opacity = '1';
+  // Keep the error visible a bit longer if it's the configuration warning
+  const duration = msg.includes("Falling back") ? 5000 : 3000;
+  setTimeout(() => { errEl.style.opacity = '0'; }, duration);
+}
+
+function enterDashboard() {
+  document.getElementById('loading-view').style.display = 'none';
+  document.getElementById('auth-view').style.display = 'none';
+  document.getElementById('dashboard-view').style.display = 'block';
+  document.getElementById('welcomeName').textContent = userProfile.name;
+  
+  requestAnimationFrame(() => {
+    drawRiver();
+    drawProjChart();
+  });
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let incomes = [];
+let allocations = [];
+let expenses = [];
+let currentFilter = 'all';
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const fmt = n => 'Rp ' + Math.abs(n).toLocaleString('id-ID', {minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtShort = n => {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return 'Rp ' + (abs / 1_000_000_000).toLocaleString('id-ID', {maximumFractionDigits:1}) + 'M';
+  if (abs >= 1_000_000) return 'Rp ' + (abs / 1_000_000).toLocaleString('id-ID', {maximumFractionDigits:1}) + 'jt';
+  return 'Rp ' + abs.toLocaleString('id-ID', {maximumFractionDigits:0});
+};
+const monthlyAmount = (amount, freq) => {
+  if (freq === 'weekly') return amount * 52 / 12;
+  if (freq === 'biweekly') return amount * 26 / 12;
+  if (freq === 'annual') return amount / 12;
+  return amount;
+};
+const totalMonthlyIncome = () => incomes.reduce((s, i) => s + monthlyAmount(i.amount, i.freq), 0);
+const totalExpenses = () => expenses.reduce((s, e) => s + e.amount, 0);
+const catColors = {
+  Housing: '#6C8EEF', Food: '#F5A623', Transport: '#FF9F43', Utilities: '#00C896',
+  Health: '#FF5F6D', Entertainment: '#9B59B6', Savings: '#00C896', Investment: '#2ECC71', Other: '#8A9BB0'
+};
+const dotColors = ['#00C896', '#F5A623', '#6C8EEF', '#FF5F6D', '#9B59B6', '#2ECC71', '#FF9F43', '#00BCD4'];
+
+function toggleForm(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+function saveLocal() {
+  if (isMock) {
+    localStorage.setItem('ft_incomes', JSON.stringify(incomes));
+    localStorage.setItem('ft_allocs', JSON.stringify(allocations));
+    localStorage.setItem('ft_expenses', JSON.stringify(expenses));
+  }
+}
+
+// ─── INCOME ──────────────────────────────────────────────────────────────────
+async function addIncome() {
+  const name = document.getElementById('incName').value.trim();
+  const amount = parseFloat(document.getElementById('incAmount').value);
+  const freq = document.getElementById('incFreq').value;
+  if (!name || isNaN(amount) || amount <= 0) return;
+  
+  const newInc = { name, amount, freq, color: dotColors[incomes.length % dotColors.length] };
+  
+  if (isMock) {
+    newInc.id = Date.now().toString();
+    incomes.push(newInc);
+    saveLocal();
+  } else {
+    try {
+      const colRef = collection(db, 'artifacts', appId, 'users', userId, 'incomes');
+      const docRef = await addDoc(colRef, newInc);
+      newInc.id = docRef.id;
+      incomes.push(newInc);
+    } catch(e) { console.error("Error adding income", e); return; }
+  }
+
+  document.getElementById('incName').value = '';
+  document.getElementById('incAmount').value = '';
+  document.getElementById('incomeForm').classList.remove('open');
+  render();
+}
+
+async function deleteIncome(id) {
+  if (isMock) {
+    incomes = incomes.filter(i => i.id !== id);
+    saveLocal();
+  } else {
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'incomes', id));
+      incomes = incomes.filter(i => i.id !== id);
+    } catch(e) { console.error("Error deleting income", e); return; }
+  }
+  render();
+}
+
+function renderIncomes() {
+  const list = document.getElementById('incomeList');
+  if (incomes.length === 0) {
+    list.innerHTML = '<div class="empty-state">No income sources yet.</div>';
+    return;
+  }
+  list.innerHTML = incomes.map((inc) => `
+    <div class="income-item">
+      <span class="income-dot" style="background:${inc.color}"></span>
+      <span class="income-name">${inc.name}</span>
+      <span class="income-amount">${fmtShort(monthlyAmount(inc.amount, inc.freq))}/mo</span>
+      <button class="income-del" onclick="deleteIncome('${inc.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+// ─── ALLOCATION ──────────────────────────────────────────────────────────────
+function updateAllocPct() {
+  const amt = parseFloat(document.getElementById('alcAmt').value);
+  const income = totalMonthlyIncome();
+  const prevEl = document.getElementById('alcPctPreview');
+  if (isNaN(amt) || income <= 0) {
+    prevEl.textContent = '% of income';
+  } else {
+    const pct = ((amt / income) * 100).toFixed(1);
+    prevEl.textContent = pct + '% of income';
+  }
+}
+
+async function addAlloc() {
+  const name = document.getElementById('alcName').value.trim();
+  const amt = parseFloat(document.getElementById('alcAmt').value);
+  const color = document.getElementById('alcColor').value;
+  const income = totalMonthlyIncome();
+  
+  if (!name || isNaN(amt) || amt <= 0 || income <= 0) return;
+  
+  const pct = parseFloat(((amt / income) * 100).toFixed(1));
+  const newAlloc = { name, pct, color };
+
+  if (isMock) {
+    newAlloc.id = Date.now().toString();
+    allocations.push(newAlloc);
+    saveLocal();
+  } else {
+    try {
+      const colRef = collection(db, 'artifacts', appId, 'users', userId, 'allocations');
+      const docRef = await addDoc(colRef, newAlloc);
+      newAlloc.id = docRef.id;
+      allocations.push(newAlloc);
+    } catch(e) { console.error("Error adding allocation", e); return; }
+  }
+
+  document.getElementById('alcName').value = '';
+  document.getElementById('alcAmt').value = '';
+  document.getElementById('alcPctPreview').textContent = '% of income';
+  document.getElementById('allocForm').classList.remove('open');
+  render();
+}
+
+async function deleteAlloc(id) {
+  if (isMock) {
+    allocations = allocations.filter(a => a.id !== id);
+    saveLocal();
+  } else {
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'allocations', id));
+      allocations = allocations.filter(a => a.id !== id);
+    } catch(e) { console.error("Error deleting allocation", e); return; }
+  }
+  render();
+}
+
+function renderAllocations() {
+  const list = document.getElementById('allocList');
+  const income = totalMonthlyIncome();
+  const totalPct = allocations.reduce((s, a) => s + a.pct, 0);
+  if (allocations.length === 0) {
+    list.innerHTML = '<div class="empty-state">No allocations yet.</div>';
+    return;
+  }
+  list.innerHTML = allocations.map(a => {
+    const amt = income * (a.pct / 100);
+    const barW = Math.min(100, (a.pct / Math.max(totalPct, 100)) * 100);
+    return `
+    <div class="alloc-item">
+      <div class="alloc-top">
+        <span class="alloc-color" style="background:${a.color}"></span>
+        <span class="alloc-name">${a.name}</span>
+        <span class="alloc-pct">${a.pct}%</span>
+        <span class="alloc-amt" style="color:${a.color}">${fmtShort(amt)}</span>
+        <button class="alloc-del" onclick="deleteAlloc('${a.id}')">✕</button>
+      </div>
+      <div class="alloc-bar-track">
+        <div class="alloc-bar-fill" style="width:${barW}%;background:${a.color}"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const remain = 100 - totalPct;
+  if (remain > 0) {
+    list.innerHTML += `
+    <div style="padding:8px 24px;display:flex;align-items:center;gap:10px;">
+      <span style="width:10px;height:10px;border-radius:3px;background:var(--border);flex-shrink:0;display:inline-block"></span>
+      <span style="font-size:12px;color:var(--dim);flex:1">Unallocated</span>
+      <span style="font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace">${remain.toFixed(1)}% — ${fmtShort(income * remain / 100)}</span>
+    </div>`;
+  }
+}
+
+// ─── EXPENSES ────────────────────────────────────────────────────────────────
+async function addExpense() {
+  const date = document.getElementById('expDate').value;
+  const desc = document.getElementById('expDesc').value.trim();
+  const cat = document.getElementById('expCat').value;
+  const amount = parseFloat(document.getElementById('expAmt').value);
+  const status = document.getElementById('expStat').value;
+  if (!date || !desc || isNaN(amount) || amount <= 0) return;
+  
+  const newExp = { date, desc, cat, amount, status };
+  
+  if (isMock) {
+    newExp.id = Date.now().toString();
+    expenses.push(newExp);
+    saveLocal();
+  } else {
+    try {
+      const colRef = collection(db, 'artifacts', appId, 'users', userId, 'expenses');
+      const docRef = await addDoc(colRef, newExp);
+      newExp.id = docRef.id;
+      expenses.push(newExp);
+    } catch(e) { console.error("Error adding expense", e); return; }
+  }
+
+  document.getElementById('expDate').value = '';
+  document.getElementById('expDesc').value = '';
+  document.getElementById('expAmt').value = '';
+  document.getElementById('expForm').classList.remove('open');
+  render();
+}
+
+async function deleteExpense(id) {
+  if (isMock) {
+    expenses = expenses.filter(e => e.id !== id);
+    saveLocal();
+  } else {
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'expenses', id));
+      expenses = expenses.filter(e => e.id !== id);
+    } catch(e) { console.error("Error deleting expense", e); return; }
+  }
+  render();
+}
+
+function filterExpenses(filter, el) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderExpenses();
+}
+
+function renderExpenses() {
+  const list = document.getElementById('expenseList');
+  const filtered = currentFilter === 'all' ? expenses : expenses.filter(e => e.status === currentFilter);
+  const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+  if (sorted.length === 0) {
+    list.innerHTML = '<div class="empty-state">No expenses to show. Add one above!</div>';
+    return;
+  }
+  list.innerHTML = sorted.map(e => {
+    const color = catColors[e.cat] || '#8A9BB0';
+    const statusClass = `status-${e.status}`;
+    const statusLabel = e.status.charAt(0).toUpperCase() + e.status.slice(1);
+    return `
+    <div class="expense-row">
+      <span class="exp-date">${e.date.slice(5).replace('-','/')}</span>
+      <span class="exp-desc">${e.desc}</span>
+      <span class="exp-cat"><span class="cat-dot" style="background:${color}"></span>${e.cat}</span>
+      <span class="exp-amount">${fmt(e.amount)}</span>
+      <span class="exp-status ${statusClass}">${statusLabel}</span>
+      <button class="exp-del" onclick="deleteExpense('${e.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ─── PROJECTIONS ─────────────────────────────────────────────────────────────
+function renderProjections() {
+  const income = totalMonthlyIncome();
+  const savingAlloc = allocations.find(a => a.name.toLowerCase().includes('sav'));
+  const savPct = savingAlloc ? savingAlloc.pct : allocations.reduce((s,a) => s + a.pct, 0) > 0 ? 20 : 20;
+  const monthlySav = income * (savPct / 100);
+  const annualAccum = monthlySav * 12;
+
+  document.getElementById('projIncome').textContent = fmtShort(income);
+  document.getElementById('projIncomeAnn').textContent = fmtShort(income * 12) + ' / year';
+  document.getElementById('projSav').textContent = fmtShort(monthlySav);
+  document.getElementById('projSavAnn').textContent = fmtShort(monthlySav * 12) + ' / year';
+  document.getElementById('projSavPct').textContent = savPct + '% of income';
+  document.getElementById('projAccum').textContent = fmtShort(annualAccum);
+}
+
+function drawProjChart() {
+  const canvas = document.getElementById('projCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  const income = totalMonthlyIncome();
+  const expBase = totalExpenses();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthlyIncome = months.map((_, i) => income * (1 + i * 0.005));
+  const monthlyExp = months.map((_, i) => Math.min(expBase * (0.9 + Math.random() * 0.2), income * 0.9));
+  const monthlyAccum = monthlyIncome.map((inc, i) => inc - monthlyExp[i]);
+
+  const allVals = [...monthlyIncome, ...monthlyExp, ...monthlyAccum];
+  const maxVal = Math.max(...allVals, 1);
+  const minVal = Math.min(...allVals, 0);
+  const range = maxVal - minVal || 1;
+  const padL = 80, padR = 16, padT = 12, padB = 24;
+  const cW = W - padL - padR;
+  const cH = H - padT - padB;
+
+  const xOf = i => padL + (i / (months.length - 1)) * cW;
+  const yOf = v => padT + cH - ((v - minVal) / range) * cH;
+
+  // grid lines
+  ctx.strokeStyle = 'rgba(36,52,71,0.8)';
+  ctx.lineWidth = 1;
+  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
+    const y = padT + t * cH;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    const v = maxVal - t * range;
+    ctx.fillStyle = '#4A5C70';
+    ctx.font = '10px Inter';
+    ctx.fillText(fmtShort(v), 2, y + 3);
+  });
+
+  const drawLine = (data, color, fill) => {
+    ctx.beginPath();
+    data.forEach((v, i) => i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v)));
+    if (fill) {
+      const zeroY = yOf(0);
+      ctx.lineTo(xOf(data.length-1), zeroY);
+      ctx.lineTo(xOf(0), zeroY);
+      ctx.closePath();
+      ctx.fillStyle = color + '18';
+      ctx.fill();
+    }
+    ctx.beginPath();
+    data.forEach((v, i) => i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v)));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  };
+
+  drawLine(monthlyIncome, '#00C896', true);
+  drawLine(monthlyExp, '#FF5F6D', true);
+  drawLine(monthlyAccum, '#6C8EEF', false);
+
+  // month labels
+  months.forEach((m, i) => {
+    ctx.fillStyle = '#4A5C70';
+    ctx.font = '9px Inter';
+    ctx.fillText(m, xOf(i) - 8, H - 4);
+  });
+
+  // legend
+  const legItems = [['Income','#00C896'],['Expenses','#FF5F6D'],['Net','#6C8EEF']];
+  legItems.forEach(([label, color], i) => {
+    const x = padL + i * 90;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, 2, 12, 4);
+    ctx.fillStyle = '#8A9BB0';
+    ctx.font = '9px Inter';
+    ctx.fillText(label, x + 16, 8);
+  });
+}
+
+// ─── RIVER CANVAS ────────────────────────────────────────────────────────────
+function drawRiver() {
+  const canvas = document.getElementById('riverCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const income = totalMonthlyIncome();
+  const expense = totalExpenses();
+  const maxVal = Math.max(income, expense, 1);
+  const incW = (income / maxVal) * (W * 0.85);
+  const expW = (expense / maxVal) * (W * 0.85);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Income bar
+  const ig = ctx.createLinearGradient(0,0,incW,0);
+  ig.addColorStop(0, '#00C896'); ig.addColorStop(1, '#00A87C');
+  ctx.fillStyle = ig;
+  ctx.beginPath();
+  const iH = H * 0.42, iY = H * 0.08;
+  ctx.roundRect(0, iY, incW, iH, [0,6,6,0]);
+  ctx.fill();
+
+  // Expense bar
+  const eg = ctx.createLinearGradient(0,0,expW,0);
+  eg.addColorStop(0, '#FF5F6D'); eg.addColorStop(1, '#C0392B');
+  ctx.fillStyle = eg;
+  ctx.beginPath();
+  const eH = H * 0.32, eY = H * 0.58;
+  ctx.roundRect(0, eY, expW, eH, [0,6,6,0]);
+  ctx.fill();
+
+  // Labels
+  ctx.font = `500 11px Inter`;
+  ctx.fillStyle = '#0D1B2A';
+  if (incW > 70) { ctx.fillText('INCOME  ' + fmtShort(income), 12, iY + iH/2 + 4); }
+  if (expW > 70) { ctx.fillText('EXPENSES  ' + fmtShort(expense), 12, eY + eH/2 + 4); }
+
+  // Net indicator
+  const net = income - expense;
+  const netX = (Math.min(income, expense) / maxVal) * (W * 0.85);
+  ctx.strokeStyle = net >= 0 ? '#00C896' : '#FF5F6D';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(netX, iY); ctx.lineTo(netX, eY + eH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ─── SUMMARY ─────────────────────────────────────────────────────────────────
+function renderSummary() {
+  const income = totalMonthlyIncome();
+  const spent = totalExpenses();
+  const remaining = income - spent;
+  const allocated = allocations.reduce((s, a) => s + income * (a.pct / 100), 0);
+  const unalloc = income - allocated;
+
+  document.getElementById('sumIncome').textContent = fmt(income);
+  document.getElementById('sumSpent').textContent = fmt(spent);
+  document.getElementById('sumRemaining').textContent = fmt(remaining);
+  document.getElementById('sumAllocated').textContent = fmt(allocated);
+  document.getElementById('sumUnalloc').textContent = fmt(unalloc);
+  document.getElementById('sumRemaining').style.color = remaining >= 0 ? 'var(--emerald)' : 'var(--red)';
+
+  // River stats
+  const savPct = income > 0 ? ((income - spent) / income * 100).toFixed(1) : 0;
+  document.getElementById('riverIncome').textContent = fmtShort(income);
+  document.getElementById('riverExpense').textContent = fmtShort(spent);
+  document.getElementById('riverNet').textContent = (remaining >= 0 ? '+' : '-') + fmtShort(Math.abs(remaining));
+  document.getElementById('riverNet').style.color = remaining >= 0 ? 'var(--emerald)' : 'var(--red)';
+  document.getElementById('riverSavRate').textContent = (savPct >= 0 ? savPct : 0) + '%';
+}
+
+// ─── LOAD DATA & MASTER RENDER ───────────────────────────────────────────────
+async function loadDashboardData() {
+  if (!userId) return;
+
+  if (isMock) {
+    const i = localStorage.getItem('ft_incomes');
+    const a = localStorage.getItem('ft_allocs');
+    const e = localStorage.getItem('ft_expenses');
+    if (i) incomes = JSON.parse(i);
+    if (a) allocations = JSON.parse(a);
+    if (e) expenses = JSON.parse(e);
+    render();
+    return;
+  }
+
+  try {
+    const incSnap = await getDocs(collection(db, 'artifacts', appId, 'users', userId, 'incomes'));
+    incomes = incSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const alcSnap = await getDocs(collection(db, 'artifacts', appId, 'users', userId, 'allocations'));
+    allocations = alcSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const expSnap = await getDocs(collection(db, 'artifacts', appId, 'users', userId, 'expenses'));
+    expenses = expSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    render();
+  } catch (err) {
+    console.error("Failed to load dashboard data.", err);
+  }
+}
+
+function render() {
+  renderIncomes();
+  renderAllocations();
+  renderExpenses();
+  renderProjections();
+  renderSummary();
+  requestAnimationFrame(() => {
+    drawRiver();
+    drawProjChart();
+  });
+}
+
+function saveData() {
+  // Manual save visual feedback 
+  const btn = document.querySelector('.save-btn');
+  btn.textContent = 'Saved ✓';
+  btn.style.background = '#00A87C';
+  setTimeout(() => { btn.textContent = 'Save ✓'; btn.style.background = ''; }, 1500);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+const now = new Date();
+document.getElementById('monthSelect').value = now.getMonth();
+const expDateInput = document.getElementById('expDate');
+expDateInput.value = now.toISOString().slice(0, 10);
+
+window.addEventListener('resize', () => { drawRiver(); drawProjChart(); });
+
+// Boot up sequence
+initFirebase();
+</script>
+</body>
+</html>
